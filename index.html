@@ -2,334 +2,248 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1132965 - HW10</title>
+    <title>1132936-HW10</title>
     <style>
-        :root {
-            --board-color: #2e7d32;
-            --cell-color: #4caf50;
-            --cell-border: #1b5e20;
+        body { 
+            background-color: #f4f4f4; 
+            display: flex; flex-direction: column; align-items: center; 
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; 
         }
-
-        body {
-            font-family: "Microsoft JhengHei", Arial, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+        .info { 
+            text-align: center; margin: 20px; padding: 15px; 
+            background: white; border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; 
         }
-
-        .info-panel {
-            background: white;
-            padding: 15px 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .status {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        /* Ëä- */
         .board {
-            display: grid;
-            grid-template-columns: repeat(8, 60px);
-            grid-template-rows: repeat(8, 60px);
-            gap: 2px;
-            background-color: var(--cell-border);
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px);
+            gap: 4px; background-color: #0e3d11; padding: 12px; border-radius: 8px;
+            perspective: 1200px; /* 強化 3D 透視感 */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
-
         .cell {
-            width: 60px;
-            height: 60px;
-            background-color: var(--cell-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            position: relative;
+            width: 60px; height: 60px; background-color: #2e7d32;
+            display: flex; justify-content: center; align-items: center;
+            position: relative; cursor: pointer; transition: background 0.2s;
         }
+        .cell:hover { background-color: #388e3c; }
 
-        .cell:hover {
-            background-color: #66bb6a;
-        }
-
-        /* ËÔËP 3D ûIHœ */
-        .piece-container {
-            width: 50px;
-            height: 50px;
+        /* 3D 棋子結構 */
+        .piece {
+            width: 54px; height: 54px;
             position: relative;
-            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* §6ûIÀK */
-        .piece-container.white-side {
-            transform: rotateY(180deg);
+        /* 旋轉定義：黑面朝前為 0deg, 白面朝前為 180deg */
+        .piece.black { transform: rotateY(0deg); }
+        .piece.white { transform: rotateY(180deg); }
+
+        .side {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 50%; backface-visibility: hidden;
+            box-shadow: inset -3px -3px 8px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.4);
+        }
+        .front { background: radial-gradient(circle at 30% 30%, #444, #000); }
+        .back { 
+            background: radial-gradient(circle at 30% 30%, #fff, #ccc); 
+            transform: rotateY(180deg); 
         }
 
-        .piece-front, .piece-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            backface-visibility: hidden;
-            box-shadow: 0 4px 4px rgba(0,0,0,0.3);
-        }
-
-        /* ÑPb (cb) */
-        .piece-front {
-            background: radial-gradient(circle at 30% 30%, #444, #000);
-            z-index: 2;
-        }
-
-        /* }Pb (Íb) */
-        .piece-back {
-            background: radial-gradient(circle at 30% 30%, #fff, #ccc);
-            transform: rotateY(180deg);
-        }
-
-        .hint {
-            width: 15px;
-            height: 15px;
-            background-color: rgba(0,0,0,0.1);
-            border-radius: 50%;
-        }
-
-        .controls {
-            margin-top: 20px;
-        }
-
-        select, button {
-            padding: 8px 15px;
-            font-size: 1rem;
-            cursor: pointer;
-        }
+        .hint { width: 12px; height: 12px; background: rgba(255,255,255,0.2); border-radius: 50%; }
+        .controls { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+        button { padding: 8px 20px; cursor: pointer; background: #1b5e20; color: white; border: none; border-radius: 5px; font-weight: bold; }
+        select { padding: 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-    <div class="info-panel">
-        <h1>Othello Ñ}Ë</h1>
-        <div class="status" id="turn-text">*0ÑË (©¶)</div>
-        <div id="score">ÑË: 2 | }Ë: 2</div>
-        
-        <div class="controls">
-            <label>AI ã¦</label>
-            <select id="difficulty">
-                <option value="basic">ú,Ë› (ªjÕ)</option>
-                <option value="advanced">2ŽË› (
-ÍU0)</option>
-            </select>
-            <button onclick="initGame()">Í°‹Ë</button>
-        </div>
+<div class="info">
+    <h2>學號：1132936-HW10</h2>
+    <div id="status">輪到：黑棋 (玩家)</div>
+    <div id="score" style="font-size: 1.2em; margin: 10px 0; font-weight: bold;">黑: 2 | 白: 2</div>
+    
+    <div class="controls">
+        AI 模式: 
+        <select id="level">
+            <option value="1">基本 (數量優先)</option>
+            <option value="2">進階 (權重優先)</option>
+        </select>
+        <button onclick="initGame()">重新開局</button>
     </div>
+</div>
 
-    <div id="board" class="board"></div>
+<div id="board" class="board"></div>
 
-    <script>
-        const BOARD_SIZE = 8;
-        let board = [];
-        let currentPlayer = 1; // 1: Black, 2: White
-        let isLock = false;
+<script>
+let grid = Array(8).fill().map(() => Array(8).fill(0));
+let turn = 1; 
+let isAnimating = false;
 
-        // 
-Íh (2Ž AI ()
-        const WEIGHTS = [
-            [100, -20, 10, 5, 5, 10, -20, 100],
-            [-20, -50, -2, -2, -2, -2, -50, -20],
-            [10, -2, 5, 1, 1, 5, -2, 10],
-            [5, -2, 1, 1, 1, 1, -2, 5],
-            [5, -2, 1, 1, 1, 1, -2, 5],
-            [10, -2, 5, 1, 1, 5, -2, 10],
-            [-20, -50, -2, -2, -2, -2, -50, -20],
-            [100, -20, 10, 5, 5, 10, -20, 100]
+function createBoardDOM() {
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.id = `cell-${r}-${c}`;
+            cell.onclick = () => handlePlayerMove(r, c);
+            boardEl.appendChild(cell);
+        }
+    }
+}
+
+function initGame() {
+    grid = Array(8).fill().map(() => Array(8).fill(0));
+    isAnimating = false;
+    turn = 1;
+    document.querySelectorAll('.cell').forEach(c => c.innerHTML = '');
+    
+    // 初始化四子 (不套用翻轉動畫)
+    placeStaticPiece(3, 3, 2); placeStaticPiece(3, 4, 1);
+    placeStaticPiece(4, 3, 1); placeStaticPiece(4, 4, 2);
+    
+    updateDisplay();
+}
+
+// 靜態放置（用於初始化，不觸發旋轉）
+function placeStaticPiece(r, c, color) {
+    grid[r][c] = color;
+    const cell = document.getElementById(`cell-${r}-${c}`);
+    cell.innerHTML = `<div class="piece ${color === 1 ? 'black' : 'white'}"><div class="side front"></div><div class="side back"></div></div>`;
+}
+
+// 動態放置/翻轉（執行 3D 動畫）
+async function animateFlip(r, c, newColor) {
+    const cell = document.getElementById(`cell-${r}-${c}`);
+    let piece = cell.querySelector('.piece');
+    
+    if (!piece) {
+        // 如果是剛下的那一子，先產生棋子（隱藏），再顯示
+        cell.innerHTML = `<div class="piece ${newColor === 1 ? 'black' : 'white'}"><div class="side front"></div><div class="side back"></div></div>`;
+    } else {
+        // 如果是現有棋子被翻轉
+        piece.className = `piece ${newColor === 1 ? 'black' : 'white'}`;
+    }
+    grid[r][c] = newColor;
+}
+
+function updateDisplay() {
+    let b = 0, w = 0;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            const hint = cell.querySelector('.hint');
+            if (grid[r][c] === 0) {
+                if (getFlips(r, c, turn).length > 0) {
+                    if (!hint) cell.innerHTML = '<div class="hint"></div>';
+                } else { if (hint) cell.innerHTML = ''; }
+            } else {
+                if (grid[r][c] === 1) b++; else w++;
+            }
+        }
+    }
+    document.getElementById('score').innerText = `黑 (玩家): ${b} | 白 (電腦): ${w}`;
+}
+
+async function handlePlayerMove(r, c) {
+    if (isAnimating || turn !== 1) return;
+    const flips = getFlips(r, c, 1);
+    if (flips.length === 0) return;
+
+    isAnimating = true;
+    document.querySelectorAll('.hint').forEach(h => h.remove());
+
+    // 1. 落下棋子
+    await animateFlip(r, c, 1);
+    
+    // 2. 依序翻轉鄰近棋子
+    for (let pos of flips) {
+        await new Promise(res => setTimeout(res, 150)); // 間隔 150ms 翻下一顆
+        animateFlip(pos.r, pos.c, 1);
+    }
+    
+    // 等待最後一顆動畫完成
+    await new Promise(res => setTimeout(res, 600));
+
+    turn = 2;
+    document.getElementById('status').innerText = "輪到：白棋 (電腦思考中...)";
+    updateDisplay();
+    setTimeout(aiMove, 600);
+}
+
+async function aiMove() {
+    const moves = [];
+    for(let r=0; r<8; r++) {
+        for(let c=0; c<8; c++) {
+            const f = getFlips(r, c, 2);
+            if(f.length > 0) moves.push({r, c, f});
+        }
+    }
+
+    if (moves.length > 0) {
+        const weights = [
+            [100,-20,10,5,5,10,-20,100], [-20,-50,1,1,1,1,-50,-20],
+            [10,1,5,2,2,5,1,10], [5,1,2,1,1,2,1,5],
+            [5,1,2,1,1,2,1,5], [10,1,5,2,2,5,1,10],
+            [-20,-50,1,1,1,1,-50,-20], [100,-20,10,5,5,10,-20,100]
         ];
-
-        function initGame() {
-            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
-            board[3][3] = 2; board[3][4] = 1;
-            board[4][3] = 1; board[4][4] = 2;
-            currentPlayer = 1;
-            isLock = false;
-            renderBoard();
+        const isPro = document.getElementById('level').value === "2";
+        moves.sort((a, b) => isPro ? (weights[b.r][b.c] - weights[a.r][a.c]) : (b.f.length - a.f.length));
+        
+        const best = moves[0];
+        await animateFlip(best.r, best.c, 2);
+        for (let pos of best.f) {
+            await new Promise(res => setTimeout(res, 150));
+            animateFlip(pos.r, pos.c, 2);
         }
+        await new Promise(res => setTimeout(res, 600));
+    }
 
-        function renderBoard() {
-            const boardEl = document.getElementById('board');
-            boardEl.innerHTML = '';
-            let bCount = 0, wCount = 0;
-
-            for (let r = 0; r < BOARD_SIZE; r++) {
-                for (let c = 0; c < BOARD_SIZE; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.onclick = () => handleMove(r, c);
-
-                    if (board[r][c] !== 0) {
-                        const piece = document.createElement('div');
-                        piece.className = 'piece-container';
-                        if (board[r][c] === 2) piece.classList.add('white-side');
-                        
-                        const front = document.createElement('div');
-                        front.className = 'piece-front';
-                        const back = document.createElement('div');
-                        back.className = 'piece-back';
-                        
-                        piece.appendChild(front);
-                        piece.appendChild(back);
-                        cell.appendChild(piece);
-                        
-                        if (board[r][c] === 1) bCount++; else wCount++;
-                    } else if (canMove(r, c, currentPlayer)) {
-                        const hint = document.createElement('div');
-                        hint.className = 'hint';
-                        cell.appendChild(hint);
-                    }
-                    boardEl.appendChild(cell);
-                }
-            }
-            document.getElementById('score').innerText = `ÑË: ${bCount} | }Ë: ${wCount}`;
-            updateTurnText();
+    turn = 1;
+    isAnimating = false;
+    document.getElementById('status').innerText = "輪到：黑棋 (玩家)";
+    
+    if (!hasPossibleMoves(1)) {
+        if (!hasPossibleMoves(2)) {
+            const finalB = grid.flat().filter(x=>x===1).length;
+            const finalW = grid.flat().filter(x=>x===2).length;
+            let msg = finalB > finalW ? "恭喜你贏了！" : (finalB < finalW ? "電腦贏了！" : "平手！");
+            alert(`遊戲結束！\n黑: ${finalB} vs 白: ${finalW}\n${msg}`);
+        } else {
+            alert("玩家無處可走，換電腦！");
+            turn = 2; aiMove();
         }
+    }
+    updateDisplay();
+}
 
-        function updateTurnText() {
-            const text = currentPlayer === 1 ? "ÑË (©¶)" : "}Ë (ûf)";
-            document.getElementById('turn-text').innerText = `*0${text}`;
+function getFlips(r, c, color) {
+    if (grid[r][c] !== 0) return [];
+    const opp = color === 1 ? 2 : 1;
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+    let res = [];
+    for (let [dr, dc] of dirs) {
+        let temp = [], cr = r + dr, cc = c + dc;
+        while (cr>=0 && cr<8 && cc>=0 && cc<8 && grid[cr][cc] === opp) {
+            temp.push({r: cr, c: cc});
+            cr += dr; cc += dc;
         }
+        if (cr>=0 && cr<8 && cc>=0 && cc<8 && grid[cr][cc] === color) res = res.concat(temp);
+    }
+    return res;
+}
 
-        async function handleMove(r, c) {
-            if (isLock || currentPlayer !== 1 || !canMove(r, c, 1)) return;
-            await executeMove(r, c, 1);
-            
-            // ûfÞ
-            if (hasAnyMove(2)) {
-                isLock = true;
-                setTimeout(computerTurn, 1000);
-            } else if (!hasAnyMove(1)) {
-                alert("J2P_");
-            } else {
-                currentPlayer = 1;
-                renderBoard();
-            }
-        }
+function hasPossibleMoves(color) {
+    for(let r=0; r<8; r++)
+        for(let c=0; c<8; c++)
+            if(getFlips(r,c,color).length > 0) return true;
+    return false;
+}
 
-        async function computerTurn() {
-            const level = document.getElementById('difficulty').value;
-            let move;
-            if (level === 'basic') {
-                move = getGreedyMove(2);
-            } else {
-                move = getBestMove(2);
-            }
-
-            if (move) {
-                await executeMove(move.r, move.c, 2);
-            }
-            
-            isLock = false;
-            if (hasAnyMove(1)) {
-                currentPlayer = 1;
-            } else if (hasAnyMove(2)) {
-                setTimeout(computerTurn, 1000);
-            } else {
-                alert("J2P_");
-            }
-            renderBoard();
-        }
-
-        // 8Ã/÷L=PûË
-        async function executeMove(r, c, color) {
-            const flippable = getFlippable(r, c, color);
-            board[r][c] = color;
-            renderBoard(); // Hkú=P
-
-            // ûËHœ
-            for (let pos of flippable) {
-                board[pos.r][pos.c] = color;
-                await new Promise(res => setTimeout(res, 150)); // “” 150ms
-                renderBoard();
-            }
-            currentPlayer = color === 1 ? 2 : 1;
-        }
-
-        function getFlippable(r, c, color) {
-            const opponents = color === 1 ? 2 : 1;
-            const directions = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-            let totalFlippable = [];
-
-            for (let [dr, dc] of directions) {
-                let temp = [];
-                let currR = r + dr;
-                let currC = c + dc;
-                while (currR >= 0 && currR < 8 && currC >= 0 && currC < 8 && board[currR][currC] === opponents) {
-                    temp.push({r: currR, c: currC});
-                    currR += dr;
-                    currC += dc;
-                }
-                if (currR >= 0 && currR < 8 && currC >= 0 && currC < 8 && board[currR][currC] === color) {
-                    totalFlippable = totalFlippable.concat(temp);
-                }
-            }
-            return totalFlippable;
-        }
-
-        function canMove(r, c, color) {
-            if (board[r][c] !== 0) return false;
-            return getFlippable(r, c, color).length > 0;
-        }
-
-        function hasAnyMove(color) {
-            for (let r = 0; r < 8; r++)
-                for (let c = 0; c < 8; c++)
-                    if (canMove(r, c, color)) return true;
-            return false;
-        }
-
-        // AI /
-        function getGreedyMove(color) {
-            let bestMove = null;
-            let maxFlip = -1;
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if (canMove(r, c, color)) {
-                        let count = getFlippable(r, c, color).length;
-                        if (count > maxFlip) {
-                            maxFlip = count;
-                            bestMove = {r, c};
-                        }
-                    }
-                }
-            }
-            return bestMove;
-        }
-
-        function getBestMove(color) {
-            let bestScore = -Infinity;
-            let bestMove = null;
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if (canMove(r, c, color)) {
-                        let score = WEIGHTS[r][c];
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestMove = {r, c};
-                        }
-                    }
-                }
-            }
-            return bestMove || getGreedyMove(color);
-        }
-
-        initGame();
-    </script>
+createBoardDOM();
+initGame();
+</script>
 </body>
 </html>
